@@ -1,0 +1,71 @@
+# Deploy an Azure Kubernetes Service (AKS) running on a Virtual Machine Scale Set (VMSS)
+trigger: none
+
+variables:
+  aks_name: aks
+  azure_location: westeurope
+  environment: publication
+  job_name: VMSS
+  resource_group_name: medium-experiment-vmss
+  vm_size: Standard_B2s
+
+stages:
+  - stage: deploy
+    displayName: deploy:${{ variables.job_name }}
+    jobs:
+      - deployment: Publication
+        pool:
+          vmImage: "ubuntu-latest"
+        variables:
+          - group: env-${{ variables.environment }}
+        displayName: Deploy ${{ variables.job_name }}
+        environment: $(environment)
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  persistCredentials: true
+
+                - task: AzureCLI@2
+                  displayName: Deploy cluster
+                  inputs:
+                    azureSubscription: $(azure_service_principal_name)
+                    addSpnToEnvironment: true
+                    scriptType: "bash"
+                    scriptLocation: "inlineScript"
+                    inlineScript: |
+                      az group create --name $(resource_group_name) --location $(azure_location)
+                      az aks create \
+                        --resource-group $(resource_group_name) \
+                        --name $(aks_name) \
+                        --node-count 1 \
+                        --node-vm-size $(vm_size) \
+                        --vm-set-type VirtualMachineScaleSets \
+                        --load-balancer-sku standard \
+                        --enable-cluster-autoscaler \
+                        --min-count 1 \
+                        --max-count 2 \
+                        --ssh-key-value "$(ssh_public_key)" \
+                        --service-principal $servicePrincipalId \
+                        --client-secret $servicePrincipalKey
+
+                - task: AzureCLI@2
+                  displayName: Configure cluster autoscale
+                  inputs:
+                    azureSubscription: $(azure_service_principal_name)
+                    addSpnToEnvironment: true
+                    scriptType: "bash"
+                    scriptLocation: "inlineScript"
+                    inlineScript: |
+                      echo "Fetching virtual machine scale set resource id ..."
+                      VMSS_RESOURCE_ID=$(az vmss list -g mc_$(resource_group_name)_$(aks_name)_$(azure_location) --query '[0].id' -o tsv)
+                      echo "Fetched virtual machine scale set resource id '$VMSS_RESOURCE_ID'"
+                      echo "Creating autoscale resource ..."
+                      az monitor autoscale create --resource $VMSS_RESOURCE_ID --count 1 --min-count 1 --max-count 2
+                      AUTOSCALE_NAME=$(az monitor autoscale list --resource-group mc_$(resource_group_name)_$(aks_name)_$(azure_location) --query '[0].name' -o tsv)
+                      echo "Created autoscale resource '$AUTOSCALE_NAME'"
+                      echo "Creating autoscale rules ..."
+                      az monitor autoscale rule create -g mc_$(resource_group_name)_$(aks_name)_$(azure_location) --autoscale-name $AUTOSCALE_NAME --scale out 1 --condition "Percentage CPU > 70 avg 3m" --cooldown 5
+                      az monitor autoscale rule create -g mc_$(resource_group_name)_$(aks_name)_$(azure_location) --autoscale-name $AUTOSCALE_NAME --scale in 1 --condition "Percentage CPU < 30 avg 10m" --cooldown 5
+                      echo "Created autoscale rules"
