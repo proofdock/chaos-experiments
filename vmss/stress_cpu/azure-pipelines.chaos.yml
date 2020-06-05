@@ -6,19 +6,23 @@ variables:
 steps:
 - checkout: self
   persistCredentials: true
+
 - task: UsePythonVersion@0
   inputs:
     versionSpec: '3.7'
     addToPath: true
     architecture: 'x64'
+
 - task: ChaosInstaller@0
+
 - task: ChaosDriver@0
   inputs:
     driver: 'proofdock-chaos-azure'
+
 - task: ChaosRunner@0
   inputs:
     token: '$(PROOFDOCK_API_TOKEN)'
     description: 'Run getting-started experiment'
     experimentPath: 'vmss/stress_cpu/experiment.yml'
-    azureConnection: '$(azure_service_principal_name)'
+    azureConnection: 'pd-service-principal'
     verbose: true
