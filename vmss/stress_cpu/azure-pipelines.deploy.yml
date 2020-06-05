@@ -4,6 +4,7 @@ trigger: none
 variables:
   aks_name: aks
   azure_location: westeurope
+  azure_service_principal_name: pd-service-principal
   environment: publication
   job_name: VMSS
   resource_group_name: medium-experiment-vmss
@@ -30,7 +31,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: Deploy cluster
                   inputs:
-                    azureSubscription: $(azure_service_principal_name)
+                    azureSubscription: ${{ variables.azure_service_principal_name }}
                     addSpnToEnvironment: true
                     scriptType: "bash"
                     scriptLocation: "inlineScript"
@@ -53,7 +54,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: Configure cluster autoscale
                   inputs:
-                    azureSubscription: $(azure_service_principal_name)
+                    azureSubscription: ${{ variables.azure_service_principal_name }}
                     addSpnToEnvironment: true
                     scriptType: "bash"
                     scriptLocation: "inlineScript"
