@@ -1,5 +1,6 @@
 # Deploy an Azure Kubernetes Service (AKS) running on a Virtual Machine Scale Set (VMSS)
 trigger: none
+pr: none
 
 variables:
   aks_name: aks

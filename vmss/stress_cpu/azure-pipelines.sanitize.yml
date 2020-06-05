@@ -1,5 +1,6 @@
 # Sanitize the deployed Azure Kubernetes Service (AKS)  and the Virtual Machine Scale Set (VMSS)
 trigger: none
+pr: none
 
 variables:
   aks_name: aks
