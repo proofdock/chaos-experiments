@@ -18,5 +18,5 @@ method:
       func: stress_cpu
       arguments:
         filter_vmss: "where resourceGroup=='mc_medium-experiment-vmss_aks_westeurope' | sample 1"
-        duration: 210
+        duration: 300
 rollbacks: []
