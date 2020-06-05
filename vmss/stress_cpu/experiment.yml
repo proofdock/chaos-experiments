@@ -1,0 +1,22 @@
+version: "1.0.0"
+title: "Check resiliency and availability of the Proofdock cluster"
+description: "Stress random instance from the cluster"
+contributions:
+  reliability: high
+  availability: high
+  performance: medium
+  security: none
+tags:
+  - azure
+  - vmss
+method:
+  - type: action
+    name: "Stress a random instance from the VMSS"
+    provider:
+      type: python
+      module: pdchaosazure.vmss.actions
+      func: stress_cpu
+      arguments:
+        filter_vmss: "where resourceGroup=='mc_medium-experiment-vmss_aks_westeurope' | sample 1"
+        duration: 120
+rollbacks: []

@@ -1,0 +1,37 @@
+# Sanitize the deployed Azure Kubernetes Service (AKS)  and the Virtual Machine Scale Set (VMSS)
+trigger: none
+
+variables:
+  aks_name: aks
+  environment: publication
+  job_name: VMSS
+  resource_group_name: medium-experiment-vmss
+
+stages:
+  - stage: deploy
+    displayName: sanitize:${{ variables.job_name }}
+    jobs:
+      - deployment: Sanitize
+        pool:
+          vmImage: "ubuntu-latest"
+        variables:
+          - group: env-${{ variables.environment }}
+        displayName: Sanitize ${{ variables.job_name }}
+        environment: $(environment)
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  persistCredentials: true
+
+                - task: AzureCLI@2
+                  displayName: Sanitize cluster
+                  inputs:
+                    azureSubscription: $(azure_service_principal_name)
+                    addSpnToEnvironment: true
+                    scriptType: "bash"
+                    scriptLocation: "inlineScript"
+                    inlineScript: |
+                      az aks delete --resource-group $(resource_group_name) --name $(aks_name) --yes
+                      az group delete --name $(resource_group_name) --yes
